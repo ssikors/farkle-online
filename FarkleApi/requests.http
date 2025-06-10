@@ -1,0 +1,38 @@
+﻿
+POST https://localhost:7102/player 
+Content-Type: application/json
+
+{
+    "name": "Player 1"
+}
+
+###
+POST https://localhost:7102/player 
+Content-Type: application/json
+
+{
+    "name": "Player 2"
+}
+
+###
+POST https://localhost:7102/lobby 
+Content-Type: application/json
+
+{
+  "name": "Lobby 1",
+  "ownerName": "Player 1"
+}
+
+###
+GET https://localhost:7102/lobby
+
+
+###
+POST https://localhost:7102/join 
+Content-Type: application/json
+
+{
+  "name": "Lobby 1",
+  "ownerName": "Player 1",
+  "playerName": "Player 2"
+}
