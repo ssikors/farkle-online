@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { connection, startConnection, stopConnection } from './lib/signalr';
+import { getConnection, startConnection, stopConnection } from './lib/signalr';
 import { createPlayer } from './lib/signalr_service';
 
 export default function Home() {
@@ -12,13 +12,14 @@ export default function Home() {
 
   const router = useRouter();
 
+  const connection = getConnection();
+
   const isValidNickname = (name: string): boolean => name.trim().length > 2;
 
   useEffect(() => {
     async function init() {
       try {
-        await startConnection();
-
+        await startConnection();        
         // 💡 Register client-side handler
         connection.on("PlayerCreated", (player) => {
           console.log("Received PlayerCreated:", player);
