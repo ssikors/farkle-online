@@ -14,18 +14,27 @@ let webApp =
         POST >=> route "/lobby" >=> createLobbyHandler
         GET >=> route "/lobby" >=> getLobbiesHandler
         POST >=> route "/join" >=> joinLobbyHandler
-        // Add GET routes if needed...
     ]
 
 
 let configureApp (app : IApplicationBuilder) =
-    // Add Giraffe to the ASP.NET Core pipeline
+    app.UseCors() |> ignore
     app.UseGiraffe webApp
+    
 
 let configureServices (services : IServiceCollection) =
-    // Add Giraffe dependencies
+    services.AddCors(fun options ->
+    options.AddDefaultPolicy(fun policy ->
+        policy
+            .AllowAnyOrigin()
+            .WithOrigins("http://localhost:3000")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials()
+            |> ignore
+    )
+    ) |> ignore
     services.AddGiraffe() |> ignore
-
 
 let configure (webHostBuilder : IWebHostBuilder) = 
     webHostBuilder

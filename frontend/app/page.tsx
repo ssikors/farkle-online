@@ -2,17 +2,30 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { createPlayerAsync } from './lib/lobby_service';
 
 export default function Home() {
   const [nickname, setNickname] = useState('');
+  const [error, setError] = useState<string>('');
+
   const router = useRouter();
 
   const isValidNickname = (name: string): boolean => name.trim().length > 2;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (isValidNickname(nickname)) {
-      router.push('/lobbies');
+      try {
+        await createPlayerAsync(nickname);
+
+        localStorage.setItem("playerName", nickname)
+
+        router.push('/lobbies');
+      } catch (e) {
+        if (e instanceof Error) {
+          setError(e.message);
+        }
+      }
     }
   };
 
@@ -36,6 +49,7 @@ export default function Home() {
           >
             Join
           </button>
+          {error != '' ? <div className='text-red-800'>{error}</div> : '' }
         </form>
       </main>
     </div>

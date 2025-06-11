@@ -19,14 +19,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${titleFont.className} antialiased m-0 p-0 h-screen flex flex-col overflow-hidden`}>
+      <body className={`${titleFont.className} antialiased m-0 p-0 h-screen w-screen flex flex-col overflow-hidden`}>
         <header className="h-16 w-full bg-[var(--color-burgundy)] text-[var(--color-parchment)] flex items-center justify-center text-4xl z-50 border-b-4 border-[var(--color-parchment)]">
           Farkle Online
         </header>
 
-        <main className={`${font.className} flex-1 bg-[var(--color-table)] text-3xl text-[var(--color-burgundy)] flex items-center justify-center`}>
+        <main className={`${font.className} w-full flex-1 overflow-hidden bg-[var(--color-table)] text-3xl text-[var(--color-burgundy)]`}>
           {children}
         </main>
+
 
         <footer className="h-16 w-full bg-[var(--color-burgundy)] text-[var(--color-parchment)] flex items-center justify-center text-base z-50 border-t-4 border-[var(--color-parchment)]">
         </footer>
