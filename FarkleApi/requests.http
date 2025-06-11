@@ -19,7 +19,7 @@ POST https://localhost:7102/lobby
 Content-Type: application/json
 
 {
-  "name": "Lobby 1",
+  "name": "Lobby 1444444444444",
   "ownerName": "Player 1"
 }
 

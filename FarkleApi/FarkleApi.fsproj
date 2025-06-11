@@ -7,6 +7,7 @@
   <ItemGroup>
 	<Compile Include="Types.fs" />
 	<Compile Include="Repositories.fs" />
+	  <Compile Include="LobbyHub.fs" />
     <Compile Include="LobbyHandlers.fs" />
     <None Include="requests.http" />
     <Compile Include="Program.fs" />

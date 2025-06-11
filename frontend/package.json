@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@microsoft/signalr": "^8.0.7",
     "@prisma/client": "^6.9.0",
     "next": "15.3.3",
     "react": "^19.0.0",

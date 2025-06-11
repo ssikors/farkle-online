@@ -17,15 +17,8 @@ module LobbyRepository =
             players.TryAdd(player.name, player) |> ignore
             Ok ()
 
-    //let getPlayer name : Player option =
-    //    match players.TryGetValue(name) with
-    //    | true, player -> Some player
-    //    | _ -> None
 
-    //let getAllPlayers () : Player list =
-    //    players.Values |> Seq.toList
-
-    // --- Lobbies ---
+    // --- Lobby ---
 
     let addLobby (lobby: Lobby) : Result<unit, string> =
         if lobbies.ContainsKey lobby.name then
@@ -36,10 +29,10 @@ module LobbyRepository =
             lobbies.TryAdd(lobby.name, lobby) |> ignore
             Ok ()
 
-    //let getLobby name : Lobby option =
-    //    match lobbies.TryGetValue(name) with
-    //    | true, lobby -> Some lobby
-    //    | _ -> None
+    let getLobby name : Lobby option =
+        match lobbies.TryGetValue(name) with
+        | true, lobby -> Some lobby
+        | _ -> None
 
     let getAllLobbies () : Lobby list =
         lobbies.Values |> Seq.toList

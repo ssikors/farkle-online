@@ -7,6 +7,7 @@ open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.DependencyInjection
 open Giraffe
 open LobbyHandlers
+open Hubs
 
 let webApp =
     choose [
@@ -17,24 +18,31 @@ let webApp =
     ]
 
 
-let configureApp (app : IApplicationBuilder) =
-    app.UseCors() |> ignore
+let configureApp (app: IApplicationBuilder) =
+    app.UseCors("AllowLocalhost") |> ignore
+
+    app.UseRouting() |> ignore
+
+    app.UseEndpoints(fun endpoints ->
+        endpoints.MapHub<LobbyHub>("/hub") |> ignore
+    ) |> ignore
+
     app.UseGiraffe webApp
     
 
 let configureServices (services : IServiceCollection) =
     services.AddCors(fun options ->
-    options.AddDefaultPolicy(fun policy ->
-        policy
-            .AllowAnyOrigin()
-            .WithOrigins("http://localhost:3000")
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials()
-            |> ignore
-    )
+        options.AddPolicy("AllowLocalhost", fun builder ->
+            builder
+                .WithOrigins("http://localhost:3000")
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials()
+                |> ignore
+        )
     ) |> ignore
     services.AddGiraffe() |> ignore
+    services.AddSignalR() |> ignore
 
 let configure (webHostBuilder : IWebHostBuilder) = 
     webHostBuilder
