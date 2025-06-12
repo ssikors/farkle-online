@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Lobby } from "../lib/types";
-import { createLobbyAsync, getLobbiesAsync } from "../lib/lobby_service";
+import { createLobbyAsync, getLobbiesAsync, joinLobbyAsync } from "../lib/lobby_service";
 import { GiBlackKnightHelm } from "react-icons/gi";
 import { MdOutlineLogin } from "react-icons/md";
 import { useRouter } from "next/navigation";
@@ -34,6 +34,16 @@ export default function Lobbies() {
 
     return () => clearInterval(interval);
   }, []);
+
+  async function handleJoinLobby(lobby: Lobby) {
+    try {
+      var newLobby: Lobby = { name: lobby.name, ownerName: lobby.ownerName, playerName: localStorage.getItem("playerName")  } ;
+      await joinLobbyAsync(newLobby);
+      router.push(`/lobbies/${encodeURIComponent(lobby.name)}`);
+    } catch (error) {
+      console.error("Failed to join lobby:", error);
+    }
+  } 
 
   const handleCreateLobby = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,7 +86,7 @@ export default function Lobbies() {
                 </div>
 
                 <div className="flex w-1/3 justify-end">
-                  <MdOutlineLogin className="scale-110 hover:scale-125 hover:text-amber-200 hover:cursor-pointer" />
+                  <MdOutlineLogin onClick={() => { handleJoinLobby(lobby) }} className="scale-110 hover:scale-125 hover:text-amber-200 hover:cursor-pointer" />
                 </div>
                 
               </li>

@@ -1,30 +1,29 @@
-"use client"
+'use client';
 
-const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+let connection: any = null;
 
-import * as signalR from '@microsoft/signalr';
-
-let connection: signalR.HubConnection | null = null;
-
-export function getConnection(): signalR.HubConnection {
+export async function getConnection() {
   if (!connection) {
+    const signalR = await import('@microsoft/signalr');
+
     connection = new signalR.HubConnectionBuilder()
-      .withUrl(`${baseUrl}/hub`) // update to your URL
+      .withUrl(`${process.env.NEXT_PUBLIC_API_URL}/hub`)
       .withAutomaticReconnect()
       .build();
   }
+
   return connection;
 }
 
 export async function startConnection() {
-  const conn = getConnection();
-  if (conn.state === signalR.HubConnectionState.Disconnected) {
+  const conn = await getConnection();
+  if (conn.state === 'Disconnected') {
     await conn.start();
   }
 }
 
 export async function stopConnection() {
-  if (connection && connection.state !== signalR.HubConnectionState.Disconnected) {
+  if (connection && connection.state !== 'Disconnected') {
     await connection.stop();
   }
 }

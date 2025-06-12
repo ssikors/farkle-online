@@ -19,10 +19,8 @@ let webApp =
 
 
 let configureApp (app: IApplicationBuilder) =
-    app.UseCors("AllowLocalhost") |> ignore
-
     app.UseRouting() |> ignore
-
+    app.UseCors("AllowLocalhost") |> ignore
     app.UseEndpoints(fun endpoints ->
         endpoints.MapHub<LobbyHub>("/hub") |> ignore
     ) |> ignore

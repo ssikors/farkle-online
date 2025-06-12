@@ -20,7 +20,9 @@ let createLobbyHandler : HttpHandler =
         task {
             let! lobby = ctx.BindJsonAsync<Lobby>()
             match LobbyRepository.addLobby lobby with
-            | Ok () -> return! Successful.created (json lobby) next ctx
+            | Ok () -> 
+                printfn "created a lobby"
+                return! Successful.created (json lobby) next ctx
             | Error msg -> return! RequestErrors.badRequest (text msg) next ctx
         }
 
@@ -34,10 +36,15 @@ let getLobbiesHandler : HttpHandler =
 let joinLobbyHandler : HttpHandler = 
     fun next ctx ->
         task {
-            let! lobby = ctx.BindJsonAsync<Lobby>()
-            match LobbyRepository.joinLobby lobby with
-            | Ok () ->
-                return! Successful.OK lobby next ctx
-            | Error msg ->
-                return! RequestErrors.badRequest (text msg) next ctx
+            try
+                let! lobby = ctx.BindJsonAsync<Lobby>()
+                match LobbyRepository.joinLobby lobby with
+                | Ok () ->
+                    return! Successful.OK lobby next ctx
+                | Error msg ->
+                    printfn $"{msg}"
+                    return! RequestErrors.badRequest (text msg) next ctx
+            with ex ->
+                return! RequestErrors.badRequest (text $"Invalid body: {ex.Message}") next ctx
         }
+

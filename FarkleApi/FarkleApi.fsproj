@@ -4,14 +4,15 @@
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
 
-  <ItemGroup>
-	<Compile Include="Types.fs" />
-	<Compile Include="Repositories.fs" />
-	  <Compile Include="LobbyHub.fs" />
-    <Compile Include="LobbyHandlers.fs" />
-    <None Include="requests.http" />
-    <Compile Include="Program.fs" />
-  </ItemGroup>
+	<ItemGroup>
+		<Compile Include="Types.fs" />
+		<Compile Include="Repositories.fs" />
+		<Compile Include="GameService.fs" />
+		<Compile Include="LobbyHub.fs" />
+		<Compile Include="LobbyHandlers.fs" />
+		<None Include="requests.http" />
+		<Compile Include="Program.fs" />
+	</ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Giraffe" Version="7.0.2" />

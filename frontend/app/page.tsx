@@ -1,71 +1,27 @@
+
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getConnection, startConnection, stopConnection } from './lib/signalr';
-import { createPlayer } from './lib/signalr_service';
+import { createPlayerAsync } from './lib/lobby_service';
 
 export default function Home() {
   const [nickname, setNickname] = useState('');
-  const [error, setError] = useState<string>('');
-  const [connectionReady, setConnectionReady] = useState(false);
-
+  const [error, setError] = useState('');
   const router = useRouter();
-
-  const connection = getConnection();
-
-  const isValidNickname = (name: string): boolean => name.trim().length > 2;
-
-  useEffect(() => {
-    async function init() {
-      try {
-        await startConnection();        
-        // 💡 Register client-side handler
-        connection.on("PlayerCreated", (player) => {
-          console.log("Received PlayerCreated:", player);
-        });
-
-        setConnectionReady(true);
-      } catch (err) {
-        console.error('Failed to connect SignalR:', err);
-        setError('Failed to connect to server');
-      }
-    }
-
-    init();
-
-    return () => {
-      connection.off("PlayerCreated");
-      stopConnection();
-    };
-  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!connectionReady) {
-      setError('Connection not ready yet');
+    if (nickname.trim().length < 3) {
+      setError('Nickname must be at least 3 characters');
       return;
     }
-    if (isValidNickname(nickname)) {
-      try {
-        const result = await createPlayer({ name: nickname });
 
-        if (result.ok) {
-          localStorage.setItem("playerName", nickname);
-          router.push('/lobbies');
-        } else {
-          setError(result.error || 'Unknown error');
-        }
-      } catch (e) {
-        if (e instanceof Error) {
-          setError(e.message);
-        } else {
-          setError('An unexpected error occurred');
-        }
-      }
-    } else {
-      setError('Nickname must be at least 3 characters');
-    }
+
+    const result = await createPlayerAsync(nickname);
+
+    localStorage.setItem('playerName', nickname);
+    router.push('/lobbies');
   }
 
   return (
@@ -88,7 +44,6 @@ export default function Home() {
           <button
             type="submit"
             className="bg-[#4b0000] text-white px-6 py-2 rounded-md hover:bg-[#5c0000] transition"
-            disabled={!connectionReady}
           >
             Join
           </button>

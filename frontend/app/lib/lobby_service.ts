@@ -17,7 +17,6 @@ export async function createPlayerAsync(name: string) {
   return await res.json();
 }
 
-
 // Lobby
 export async function getLobbiesAsync() {
     const res = await fetch(`${baseUrl}/lobby`, {
@@ -45,6 +44,21 @@ export async function createLobbyAsync(ownerName: string, name: string) {
 
   if (res.status != 201) {
     throw new Error("Failed to create lobby");
+  }
+
+  return await res.json();
+}
+
+
+export async function joinLobbyAsync(lobby: Lobby) : Promise<Lobby> {
+  const res = await fetch(`${baseUrl}/join`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(lobby),
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to join lobby");
   }
 
   return await res.json();
