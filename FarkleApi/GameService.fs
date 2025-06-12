@@ -82,46 +82,103 @@ module GameService =
             scoreCombination dice
         else
             0
-
-
-    let updateDiceForLobby (lobbyName: string) (newDiceList: int list) : Result<GameState, string> =
+    
+    let scoreAndPass (lobbyName: string) (scoringDice: int list) : Result<GameState, string> =
         let updatedGameState =
-            LobbyRepository.updateGameState lobbyName (fun maybeState ->
-                match maybeState with
-                | Some gameState -> { gameState with diceList = newDiceList }
-                | None -> 
-                    // If no GameState exists, create a new default one
-                    { ownerTurn = true
-                      ownerScore = 0
-                      ownerRoundScore = 0
-                      playerScore = 0
-                      playerRoundScore = 0
-                      diceList = newDiceList
-                      diceCount = List.length newDiceList }
+            LobbyRepository.updateGameState lobbyName (fun prevState ->
+                let isOwnerTurn = prevState.Value.ownerTurn
+                let score = scoreDice scoringDice prevState.Value.diceList
+
+                let winningScore = 2000
+
+                {
+                    ownerTurn = not isOwnerTurn
+                    ownerScore =
+                        if isOwnerTurn then
+                            prevState.Value.ownerScore + prevState.Value.ownerRoundScore + score
+                        else
+                            prevState.Value.ownerScore
+                    ownerRoundScore = 0
+                    playerScore =
+                        if not isOwnerTurn then
+                            prevState.Value.playerScore + prevState.Value.playerRoundScore + score
+                        else
+                            prevState.Value.playerScore
+                    playerRoundScore = 0
+                    diceList = getDice 6
+                    diceCount = 6
+                    started = if isOwnerTurn then
+                                    if prevState.Value.ownerScore + prevState.Value.ownerRoundScore + score >= winningScore then false else true
+                              else
+                                    if prevState.Value.playerScore + prevState.Value.playerRoundScore + score >= winningScore then false else true
+                }
             )
 
         match LobbyRepository.getGameState lobbyName with
         | Some gs -> Ok gs
         | None -> Error $"Game state for lobby '{lobbyName}' not found after update."
 
-    
-    let scoreAndPass (lobbyName: string) (scoringDice: int list)  : Result<GameState, string> =
+
+    let scoreAndRoll (lobbyName: string) (scoringDice: int list)  : Result<GameState, string> =
+        let updatedGameState =
+            LobbyRepository.updateGameState lobbyName (fun prevState ->
+                    let diceCount = match prevState.Value.diceCount - scoringDice.Length with
+                                    | 0 -> 6
+                                    | _ -> prevState.Value.diceCount - scoringDice.Length
+                    { ownerTurn = prevState.Value.ownerTurn
+                      ownerScore = prevState.Value.ownerScore
+                      ownerRoundScore = match prevState.Value.ownerTurn with
+                                        | true -> prevState.Value.ownerRoundScore + scoreDice scoringDice prevState.Value.diceList
+                                        | false -> 0
+                      playerScore = prevState.Value.playerScore
+                      playerRoundScore = match prevState.Value.ownerTurn with
+                                            | false -> prevState.Value.playerRoundScore + scoreDice scoringDice prevState.Value.diceList
+                                            | true -> 0
+                      diceList = getDice diceCount
+                      diceCount = diceCount
+                      started = true
+                    }
+            )
+
+        match LobbyRepository.getGameState lobbyName with
+        | Some gs -> Ok gs
+        | None -> Error $"Game state for lobby '{lobbyName}' not found after update."
+
+    let endTurn (lobbyName: string) : Result<GameState, string> =
         let updatedGameState =
             LobbyRepository.updateGameState lobbyName (fun prevState ->
                     { ownerTurn = not prevState.Value.ownerTurn
                       ownerScore = prevState.Value.ownerScore
                       ownerRoundScore = 0
-                      playerScore = match prevState.Value.ownerTurn with
-                                    | false -> prevState.Value.playerScore + prevState.Value.playerRoundScore + scoreDice scoringDice prevState.Value.diceList
-                                    | true -> prevState.Value.playerScore
+                      playerScore = prevState.Value.playerScore
                       playerRoundScore = 0
                       diceList = getDice 6
-                      diceCount = 6 }
+                      diceCount = 6
+                      started = true 
+                    }
             )
 
         match LobbyRepository.getGameState lobbyName with
         | Some gs -> Ok gs
         | None -> Error $"Game state for lobby '{lobbyName}' not found after update."
 
+    let startGame (lobbyName: string) : Result<GameState, string> =
+        let initialGameState = {
+            ownerTurn = true
+            ownerScore = 0
+            ownerRoundScore = 0
+            playerScore = 0
+            playerRoundScore = 0
+            diceList = getDice 6
+            diceCount = 6
+            started = true
+        }
+
+        let updated =
+            LobbyRepository.updateGameState lobbyName (fun _ -> initialGameState)
+
+        match LobbyRepository.getGameState lobbyName with
+        | Some gs -> Ok gs
+        | None -> Error $"Game state for lobby '{lobbyName}' not found after start."
 
     

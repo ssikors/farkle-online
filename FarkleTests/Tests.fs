@@ -9,28 +9,6 @@ open Game
 module GameServiceTests =
 
     [<Fact>]
-    let ``updateDiceForLobby updates dice list correctly`` () =
-        // Arrange
-        let lobbyName = "testLobby"
-        let owner = { name = "owner1" }
-        let lobby = { name = lobbyName; ownerName = owner.name; playerName = None }
-        LobbyRepository.addPlayer owner |> ignore
-        LobbyRepository.addLobby lobby |> ignore
-
-        let newDiceList = [1; 3; 5; 6]
-
-        // Act
-        let result = GameService.updateDiceForLobby lobbyName newDiceList
-
-        // Assert
-        match result with
-        | Ok gameState ->
-            gameState.diceList |> should equal newDiceList
-            gameState.diceCount |> should equal (List.length newDiceList)
-        | Error msg ->
-            failwithf "Update failed: %s" msg
-
-    [<Fact>]
     let ``Single dice scored correctly`` () =
         // Arrange
         let lobbyName = "testLobby"

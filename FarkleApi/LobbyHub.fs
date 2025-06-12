@@ -4,6 +4,7 @@ open Types
 open Repositories
 open Microsoft.AspNetCore.SignalR
 open System.Threading.Tasks
+open Game
 
 type LobbyHub() =
     inherit Hub()
@@ -87,3 +88,43 @@ type LobbyHub() =
                 printfn "Lobby not found"
                 do! this.Clients.Caller.SendAsync("Error", $"Lobby {lobbyName} not found")
         }
+
+        member this.scoreAndPass(lobbyName: string, scoringDice: int list) : Task =
+        task {
+            printfn $"Passing, dice: {scoringDice.ToString()}"
+            match GameService.scoreAndPass lobbyName scoringDice with
+            | Ok gameState ->
+                match gameState.started with
+                | true -> do! this.Clients.Group(lobbyName).SendAsync("GameStateUpdated", gameState)
+                | false -> do! this.Clients.Group(lobbyName).SendAsync("GameFinished", gameState)
+            | Error msg ->
+                do! this.Clients.Caller.SendAsync("Error", msg)
+        }
+
+        member this.scoreAndRoll(lobbyName: string, scoringDice: int list) : Task =
+            task {
+                printfn $"Rolling, dice: {scoringDice.ToString()}"
+                match GameService.scoreAndRoll lobbyName scoringDice with
+                | Ok gameState ->
+                    do! this.Clients.Group(lobbyName).SendAsync("GameStateUpdated", gameState)
+                | Error msg ->
+                    do! this.Clients.Caller.SendAsync("Error", msg)
+            }
+
+        member this.endTurn(lobbyName: string) : Task =
+            task {
+                match GameService.endTurn lobbyName with
+                | Ok gameState ->
+                    do! this.Clients.Group(lobbyName).SendAsync("GameStateUpdated", gameState)
+                | Error msg ->
+                    do! this.Clients.Caller.SendAsync("Error", msg)
+            }
+
+        member this.startGame(lobbyName: string) : Task =
+            task {
+                match GameService.startGame lobbyName with
+                | Ok gameState ->
+                    do! this.Clients.Group(lobbyName).SendAsync("GameStateUpdated", gameState)
+                | Error msg ->
+                    do! this.Clients.Caller.SendAsync("Error", msg)
+            }

@@ -12,4 +12,5 @@ type GameState = {
     playerRoundScore: int;
     diceList: int list;
     diceCount: int;
+    started: bool
 }

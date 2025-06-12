@@ -10,8 +10,12 @@ import {
   GiDiceSixFacesFive,
   GiDiceSixFacesSix,
 } from "react-icons/gi";
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import * as signalR from "@microsoft/signalr";
+import { GameState } from '@/app/lib/types';
+
+// Import your scoring utility functions here:
+import { hasScorableSubset, isScorableSelection } from '@/app/lib/game_logic'; // adjust path as needed
 
 const diceIcons = {
   1: GiDiceSixFacesOne,
@@ -29,18 +33,29 @@ export default function LobbyPage() {
   const connectionRef = useRef<signalR.HubConnection | null>(null);
   const [playerName, setPlayerName] = useState<string>("You");
   const [enemyName, setEnemyName] = useState<string>("Waiting...");
+  const [gameState, setGameState] = useState<GameState | null>(null);
+  const [message, setMessage] = useState<string>("Waiting for the game to start...");
+  const [owner, setOwner] = useState<string>("");
+  const [selectedDice, setSelectedDice] = useState<number[]>([]);
+  const [diceOffsets, setDiceOffsets] = useState<number[]>([]);
 
-  const dice = useMemo(() => {
-    return Array.from({ length: 6 }, (_, i) => ({
-      id: i,
-      value: Math.floor(Math.random() * 6) + 1,
-      offset: Math.floor(Math.random() * 200),
-    }));
-  }, []);
+  useEffect(() => {
+    setSelectedDice([]);
+    setDiceOffsets(prev => {
+      const dice = gameState?.diceList;
+      if (!dice) return prev; // prevent returning undefined
+      if (prev.length === dice.length) return prev;
+      return dice.map(() => Math.floor(Math.random() * 100));
+    });
+  }, [gameState?.ownerTurn]);
 
   useEffect(() => {
     const storedName = localStorage.getItem("playerName") || "Anonymous";
     setPlayerName(storedName);
+
+    if (owner === "") {
+      setOwner(storedName);
+    }
 
     if (!connectionRef.current) {
       const conn = new signalR.HubConnectionBuilder()
@@ -57,8 +72,21 @@ export default function LobbyPage() {
         console.log("SignalR connection closed.", error);
       });
 
+      conn.on("GameStateUpdated", (gameState: GameState) => {
+        setGameState(gameState);
+        setMessage(gameState.started ? "Game in progress..." : "Waiting for the game to start...");
+      });
+
+      conn.on("GameFinished", (gameState: GameState) => {
+        setGameState(gameState);
+        setMessage(`Game over! ${gameState.ownerTurn ? (owner == playerName ? enemyName : playerName)  : owner } wins`);
+      });
+
       conn.on("LobbyUpdated", (lobby) => {
         const enemy = lobby.ownerName === storedName ? lobby.playerName : lobby.ownerName;
+        if (owner !== lobby.ownerName) {
+          setOwner(lobby.ownerName);
+        }
         setEnemyName(enemy || "Waiting...");
       });
 
@@ -80,12 +108,10 @@ export default function LobbyPage() {
           console.error("SignalR Connection Error: ", err);
         });
     } else if (connectionRef.current.state === signalR.HubConnectionState.Connected) {
-      // If connection already exists and is connected, just invoke joinGame again for the new lobbyName
       connectionRef.current.invoke("joinGame", lobbyName, storedName).catch(console.error);
     }
 
     return () => {
-      // Cleanup on component unmount
       if (connectionRef.current) {
         connectionRef.current.stop().catch(console.error);
         connectionRef.current = null;
@@ -93,55 +119,211 @@ export default function LobbyPage() {
     };
   }, [lobbyName]);
 
+  async function startGame() {
+    try {
+      await connectionRef.current?.invoke("startGame", lobbyName);
+    } catch (err) {
+      console.error("Failed to start game:", err);
+    }
+  }
+
+  const renderDice = (diceList: number[]) => {
+    return (
+      <div className="flex gap-1">
+        {diceList.sort().map((value, index) => {
+          const Icon = diceIcons[value as keyof typeof diceIcons];
+          const offset = diceOffsets[index] || 0;
+          const selected = selectedDice.includes(index);
+
+          const toggleDice = () => {
+            setSelectedDice((prev) =>
+              prev.includes(index)
+                ? prev.filter(i => i !== index)
+                : [...prev, index]
+            );
+            console.log("selectedDice")
+            console.log(selectedDice)
+            console.log("diceList")
+            console.log(diceList)
+          };
+
+          return (
+            <div
+              key={index}
+              className="relative flex items-center justify-center"
+              style={{ marginTop: `${offset}px` }}
+            >
+              <div
+                onClick={toggleDice}
+                className={`text-burgundy p-2 flex items-center justify-center text-4xl border-2 ${selected ? "border-red-600" : "border-table"
+                  } hover:border-amber-500 hover:cursor-pointer rounded-full`}
+              >
+                <Icon className="bg-white rounded-sm" />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const isPlayerOwner = playerName === owner;
+  const isPlayersTurn = gameState?.ownerTurn === isPlayerOwner;
+
+  // Calculate if entire dice set has scorable subsets
+  const hasAnyScorable = useMemo(() => {
+    if (!gameState) return false;
+    return hasScorableSubset(gameState.diceList);
+  }, [gameState]);
+
+  // Calculate if the selected dice form a scorable selection
+  const isValidSelection = useMemo(() => {
+    if (!gameState) return false;
+    const selectedValues = selectedDice.map(i => gameState.diceList[i]);
+    return isScorableSelection(selectedValues);
+  }, [selectedDice, gameState]);
+
+  const scoreAndPass = async () => {
+  try {
+    if (!gameState?.diceList) return;
+
+    const sortedDice = [...gameState.diceList].sort();
+    const scoringDice = selectedDice.map(i => sortedDice[i]);
+
+    console.log("scoring")
+    console.log(scoringDice)
+
+    await connectionRef.current?.invoke("scoreAndPass", lobbyName, scoringDice);
+    setSelectedDice([]);
+  } catch (err) {
+    console.error("Failed to score and pass:", err);
+  }
+};
+
+const scoreAndRoll = async () => {
+  try {
+    if (!gameState?.diceList) return;
+
+    const sortedDice = [...gameState.diceList].sort();
+    const scoringDice = selectedDice.map(i => sortedDice[i]);
+
+    console.log("scoring")
+    console.log(scoringDice)
+
+    await connectionRef.current?.invoke("scoreAndRoll", lobbyName, scoringDice);
+    setSelectedDice([]);
+  } catch (err) {
+    console.error("Failed to score and roll:", err);
+  }
+};
+
+
+  const pass = async () => {
+    try {
+      await connectionRef.current?.invoke("endTurn", lobbyName);
+      setSelectedDice([]);
+    } catch (err) {
+      console.error("Failed to pass:", err);
+    }
+  };
+
+
+  const buttonClass = "py-1 px-4 rounded-md bg-burgundy text-white text-sm shadow-black shadow-sm hover:cursor-pointer hover:text-amber-200 hover:bg-red-900 disabled:opacity-50 disabled:cursor-not-allowed";
+
+  const startButton = (
+    <div
+      onClick={startGame}
+      className={buttonClass}
+    >
+      Play
+    </div>
+  );
+
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
       {/* Enemy name */}
-      <div className="h-12 w-full flex flex-row items-center justify-center text-xl bg-[var(--color-table)] text-[var(--color-burgundy)] border-b border-[var(--color-burgundy)]">
+      <div className="h-12 w-full flex flex-row items-center justify-center text-xl bg-table text-burgundy border-b border-burgundy">
         <GiBlackKnightHelm />
         <div className="ml-2">[ {enemyName} ]</div>
       </div>
 
       {/* Tabletop */}
-      <div className="flex-1 w-full grid grid-rows-2 divide-y divide-[var(--color-burgundy)] bg-[var(--color-table)] text-[var(--color-burgundy)]">
+      <div className="flex-1 w-full grid grid-rows-[1fr_auto_1fr] divide-y divide-burgundy bg-table text-burgundy">
         {/* Enemy area */}
         <div className="flex items-center justify-center text-2xl w-full">
-          Enemy's Dice Area
-        </div>
-
-        {/* Player area */}
-        <div className="flex flex-row items-center justify-center text-2xl w-full">
           <div className="flex flex-col justify-center items-center h-full w-1/4">
-            Dice put away
+            Enemy's Dice Put Away
           </div>
-
-          {/* Dice display */}
           <div className="flex h-full justify-center items-center w-1/2">
-            <div className="flex gap-1">
-              {dice.map(die => {
-                const Icon = diceIcons[die.value as keyof typeof diceIcons];
-                return (
-                  <div
-                    key={die.id}
-                    className="relative flex items-center justify-center"
-                    style={{ marginTop: `${die.offset}px` }}
-                  >
-                    <div className="text-[var(--color-burgundy)] p-2 flex items-center justify-center text-4xl border-2 border-[var(--color-table)] hover:border-amber-500 rounded-full">
-                      <Icon className='bg-white rounded-sm' />
-                    </div>
-                  </div>
-                );
-              })}
+            {gameState && !isPlayersTurn && renderDice(gameState.diceList.sort())}
+          </div>
+          <div className="flex flex-col justify-center items-center h-full w-1/4">
+            <div className="text-sm">Enemy's Score</div>
+            <div className="text-lg font-bold">
+              {isPlayerOwner ? gameState?.playerScore : gameState?.ownerScore}
+            </div>
+            <div className="text-xs italic">
+              Round: {isPlayerOwner ? gameState?.playerRoundScore : gameState?.ownerRoundScore}
             </div>
           </div>
 
+        </div>
+
+        {/* Middle status message */}
+        <div className="py-2 flex items-center justify-center text-lg italic text-burgundy bg-parchment">
+          {!gameState || !gameState.started
+            ? (playerName === owner ? startButton : message)
+            : message}
+        </div>
+
+        {/* Player area */}
+        <div className="flex shrink items-center justify-center text-2xl w-full">
           <div className="flex flex-col justify-center items-center h-full w-1/4">
-            Scores area
+            Your Dice Put Away
           </div>
+          <div className="flex flex-col h-full justify-around items-center w-1/2">
+            {gameState && isPlayersTurn &&
+              <>
+                {renderDice(gameState.diceList)}
+                <div className='flex flex-row justify-center items-center gap-2'>
+                  <button
+                    onClick={scoreAndPass}
+                    className={buttonClass}
+                    disabled={selectedDice.length == 0 || (!hasAnyScorable || !isValidSelection)}
+                  >
+                    Score & pass
+                  </button>
+                  <button
+                    onClick={scoreAndRoll}
+                    className={buttonClass}
+                    disabled={selectedDice.length == 0 || (!hasAnyScorable || !isValidSelection)}
+                  >
+                    Score & roll
+                  </button>
+                  <button
+                    onClick={pass}
+                    className={buttonClass}
+                  >
+                    Pass
+                  </button>
+                </div>
+              </>}
+          </div>
+          <div className="flex flex-col justify-center items-center h-full w-1/4">
+            <div className="text-sm">Your Score</div>
+            <div className="text-lg font-bold">
+              {isPlayerOwner ? gameState?.ownerScore : gameState?.playerScore}
+            </div>
+            <div className="text-xs italic">
+              Round: {isPlayerOwner ? gameState?.ownerRoundScore : gameState?.playerRoundScore}
+            </div>
+          </div>
+
         </div>
       </div>
 
       {/* Player name */}
-      <div className="h-12 w-full flex flex-row items-center text-center justify-center text-xl bg-[var(--color-table)] text-[var(--color-burgundy)] border-t border-[var(--color-burgundy)]">
+      <div className="h-12 w-full flex flex-row items-center text-center justify-center text-xl bg-table text-burgundy border-t border-burgundy">
         <GiBlackKnightHelm />
         <div className="ml-2">[ {playerName} ]</div>
       </div>
