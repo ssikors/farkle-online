@@ -24,7 +24,6 @@ type LobbyHub() =
                             // Promote second player to owner
                             Some { lobby with ownerName = lobby.playerName.Value; playerName = None }
                         elif lobby.ownerName = playerName then
-                            // Only owner → delete lobby
                             LobbyRepository.removeLobby lobby.name |> ignore
                             None
                         elif lobby.playerName = Some playerName then
@@ -52,13 +51,9 @@ type LobbyHub() =
 
 
     member this.joinGame(lobbyName: string, playerName: string) : Task =
-        printfn "join game invoked"
-        
         task {
             this.Context.Items["name"] <- playerName :> obj
             this.Context.Items["lobby"] <- lobbyName :> obj
-
-            printfn $"{playerName} joined lobby {lobbyName}"
 
             match LobbyRepository.getLobby lobbyName with
             | Some lobby ->
@@ -73,25 +68,21 @@ type LobbyHub() =
                         printfn "Error joining lobby"
                         do! this.Clients.Caller.SendAsync("Error", msg)
                 else
-                    printfn $"{playerName} rejoined lobby {lobbyName}"
+                    printfn $"{playerName} joined lobby {lobbyName}"
 
                 do! this.Groups.AddToGroupAsync(this.Context.ConnectionId, lobbyName)
 
-                printfn "Added to group"
 
                 match LobbyRepository.getLobby lobbyName with
                 | Some lobby -> do! this.Clients.Group(lobbyName).SendAsync("LobbyUpdated", lobby)
                 | None -> 
-                    printfn "getLobby returned None"
                     ()
             | None ->
-                printfn "Lobby not found"
                 do! this.Clients.Caller.SendAsync("Error", $"Lobby {lobbyName} not found")
         }
 
         member this.scoreAndPass(lobbyName: string, scoringDice: int list) : Task =
         task {
-            printfn $"Passing, dice: {scoringDice.ToString()}"
             match GameService.scoreAndPass lobbyName scoringDice with
             | Ok gameState ->
                 match gameState.started with
