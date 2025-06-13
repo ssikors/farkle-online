@@ -16,6 +16,7 @@ import { GameState } from '@/app/lib/types';
 
 // Import your scoring utility functions here:
 import { hasScorableSubset, isScorableSelection } from '@/app/lib/game_logic'; // adjust path as needed
+import Image from 'next/image';
 
 const diceIcons = {
   1: GiDiceSixFacesOne,
@@ -38,6 +39,9 @@ export default function LobbyPage() {
   const [owner, setOwner] = useState<string>("");
   const [selectedDice, setSelectedDice] = useState<number[]>([]);
   const [diceOffsets, setDiceOffsets] = useState<number[]>([]);
+  const [winnerModalVisible, setWinnerModalVisible] = useState(false);
+  const [winnerName, setWinnerName] = useState<string | null>(null);
+
 
   useEffect(() => {
     setSelectedDice([]);
@@ -73,14 +77,29 @@ export default function LobbyPage() {
       });
 
       conn.on("GameStateUpdated", (gameState: GameState) => {
+        const victorySound = new Audio('/sounds/move.mp3');
+        victorySound.volume = 0.3;
+        victorySound.play().catch(console.error);
+
         setGameState(gameState);
         setMessage(gameState.started ? "Game in progress..." : "Waiting for the game to start...");
       });
 
-      conn.on("GameFinished", (gameState: GameState) => {
-        setGameState(gameState);
-        setMessage(`Game over! ${gameState.ownerTurn ? (owner == playerName ? enemyName : playerName)  : owner } wins`);
+      conn.on("GameFinished", (winner: string) => {
+        setWinnerName(winner.toUpperCase());
+        setWinnerModalVisible(true);
+
+        const victorySound = new Audio('/sounds/victory.mp3');
+        victorySound.volume = 0.5;
+        victorySound.play().catch(console.error);
+
+
+        setTimeout(() => {
+          setWinnerModalVisible(false);
+          setWinnerName(null);
+        }, 5000);
       });
+
 
       conn.on("LobbyUpdated", (lobby) => {
         const enemy = lobby.ownerName === storedName ? lobby.playerName : lobby.ownerName;
@@ -241,18 +260,22 @@ const scoreAndRoll = async () => {
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
-      {/* Enemy name */}
+      {winnerModalVisible && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 animate-fadeIn">
+          <div className="bg-parchment text-burgundy text-2xl font-bold px-8 py-6 rounded-lg shadow-lg border-2 border-burgundy">
+            Game over! {winnerName} wins 🎉
+          </div>
+        </div>
+      )}
+
       <div className="h-12 w-full flex flex-row items-center justify-center text-xl bg-table text-burgundy border-b border-burgundy">
         <GiBlackKnightHelm />
         <div className="ml-2">[ {enemyName} ]</div>
       </div>
 
-      {/* Tabletop */}
       <div className="flex-1 w-full grid grid-rows-[1fr_auto_1fr] divide-y divide-burgundy bg-table text-burgundy">
-        {/* Enemy area */}
         <div className="flex items-center justify-center text-2xl w-full">
           <div className="flex flex-col justify-center items-center h-full w-1/4">
-            Enemy's Dice Put Away
           </div>
           <div className="flex h-full justify-center items-center w-1/2">
             {gameState && !isPlayersTurn && renderDice(gameState.diceList.sort())}
@@ -269,18 +292,17 @@ const scoreAndRoll = async () => {
 
         </div>
 
-        {/* Middle status message */}
         <div className="py-2 flex items-center justify-center text-lg italic text-burgundy bg-parchment">
           {!gameState || !gameState.started
             ? (playerName === owner ? startButton : message)
             : message}
         </div>
 
-        {/* Player area */}
         <div className="flex shrink items-center justify-center text-2xl w-full">
-          <div className="flex flex-col justify-center items-center h-full w-1/4">
-            Your Dice Put Away
+          <div className="flex justify-start items-center h-full w-1/4">
+            <Image width={200} height={200} src={'/scoring.jpg' } alt={''}></Image>
           </div>
+
           <div className="flex flex-col h-full justify-around items-center w-1/2">
             {gameState && isPlayersTurn &&
               <>
@@ -322,7 +344,6 @@ const scoreAndRoll = async () => {
         </div>
       </div>
 
-      {/* Player name */}
       <div className="h-12 w-full flex flex-row items-center text-center justify-center text-xl bg-table text-burgundy border-t border-burgundy">
         <GiBlackKnightHelm />
         <div className="ml-2">[ {playerName} ]</div>

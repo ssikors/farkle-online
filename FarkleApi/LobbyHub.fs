@@ -96,7 +96,22 @@ type LobbyHub() =
             | Ok gameState ->
                 match gameState.started with
                 | true -> do! this.Clients.Group(lobbyName).SendAsync("GameStateUpdated", gameState)
-                | false -> do! this.Clients.Group(lobbyName).SendAsync("GameFinished", gameState)
+                | false ->
+                    match LobbyRepository.getLobby lobbyName with
+                    | Some lobby ->
+                        let winner =
+                            match gameState.ownerTurn with
+                            | false -> lobby.ownerName
+                            | true ->
+                                match lobby.playerName with
+                                | Some name -> name
+                                | None -> "Unknown Player"
+
+                        do! this.Clients.Group(lobbyName).SendAsync("GameStateUpdated", gameState)
+                        do! this.Clients.Group(lobbyName).SendAsync("GameFinished", winner)
+                    | None -> 
+                        printfn "getLobby returned None"
+                        ()
             | Error msg ->
                 do! this.Clients.Caller.SendAsync("Error", msg)
         }
