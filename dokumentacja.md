@@ -29,7 +29,7 @@ Funkcje nie mają efektów ubocznych, w większości przypadków też te same da
 ```fsharp
 updateGameState (lobbyName: string) (updateFn: GameState option -> GameState)
 ```
-Zastosowałem także funkcje wyższego rzędu, choćby tutaj umożliwiają one podanie funkcji modyfikującej stan gry jako argumentu
+Zastosowałem także funkcje wyższego rzędu, choćby tutaj umożliwiają one podanie funkcji modyfikującej stan gry jako argumentu.
 
 **Dopasowanie wzorców**
 ```fsharp
@@ -41,9 +41,9 @@ Zastosowałem także funkcje wyższego rzędu, choćby tutaj umożliwiają one p
                 | [1; 1; 2; 3; 4; 5] -> 750 + 100
                 | _ -> scoreRepeated dice
 ```
-Spora część logiki aplikacji, a szczególnie logika gry, wykorzystuje dopasowywanie wzorców (pattern matching) w swoim działaniu
+Spora część logiki aplikacji, a szczególnie logika gry, wykorzystuje dopasowywanie wzorców (pattern matching) w swoim działaniu.
 
-**Logika oparta na danych i wykorzystanie map, fold**
+#### Logika oparta na danych i wykorzystanie map, fold
 ```fsharp
 List.fold (
 fun acc (value, count) ->
@@ -60,6 +60,7 @@ fun acc (value, count) ->
                 n * (diceScores.TryFind value |> Option.defaultValue 0)
 ) 0 results
 ```
+W projekcie wykorzystuję operacje na listach takie jak fold i map.
 
 #### Niemutowalność danych
 Niemutowalność danych jest w głównej mierze przestrzegana jednak są pewne wyjątki, modyfikowany jest stan gry powiązany z daną poczekalnią poprzez słowniki współbieżne (Concurrent Dictionary).
@@ -68,3 +69,38 @@ Niemutowalność danych jest w głównej mierze przestrzegana jednak są pewne w
 ### Frontend (NextJS + TypeScript)
 Przeglądarkowy interfejs aplikacji został zaimplementowany przy użyciu platformy **NextJS** z użyciem języka **TypeScript**. Klient obsługuje komunikację RESTową oraz komunikację przez SignalR z backendem.
 
+## Instrukcja uruchomienia
+### 1. Backend (F# / .NET)
+
+#### Wymagania
+- [.NET 8 SDK](https://dotnet.microsoft.com/en-us/download)
+
+#### Uruchomienie
+
+```bash
+cd backend
+dotnet restore
+dotnet build
+dotnet run 
+```
+
+### 2. Frontend (Next.js)
+#### Wymagania
+- [Node.js v18+](https://nodejs.org/)
+- [npm](https://www.npmjs.com/)
+
+#### Uruchomienie
+```bash
+cd frontend
+npm install
+```
+
+Należy utworzyć plik `.env` w folderze `/frontend` zawierający url backendu:
+```ini
+NEXT_PUBLIC_API_URL=https://localhost:7102
+```
+
+Uruchomienie aplikacji
+```bash
+npm run dev
+```
