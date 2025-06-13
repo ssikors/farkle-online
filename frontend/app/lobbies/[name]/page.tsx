@@ -300,7 +300,7 @@ const scoreAndRoll = async () => {
 
         <div className="flex shrink items-center justify-center text-2xl w-full">
           <div className="flex justify-start items-center h-full w-1/4">
-            <Image width={200} height={200} src={'/scoring.jpg' } alt={''}></Image>
+            {/* <Image width={200} height={200} src={'/scoring.jpg' } alt={''}></Image> */}
           </div>
 
           <div className="flex flex-col h-full justify-around items-center w-1/2">
